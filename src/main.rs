@@ -2,11 +2,14 @@ pub mod analyses;
 pub mod checkers;
 pub mod lattices;
 pub mod utils;
+use crate::lattices::stack_growth_lattice::StackGrowthLattice;
 use crate::analyses::call_analyzer::CallAnalyzer;
 use crate::analyses::heap_analyzer::HeapAnalyzer;
 use crate::analyses::reaching_defs::{analyze_reaching_defs,ReachingDefnAnalyzer};
 use crate::analyses::run_worklist;
 use crate::analyses::stack_analyzer::StackAnalyzer;
+use crate::analyses::AnalysisResult;
+// use crate::analyses::locals_analyzer::LocalsAnalyzer;
 use crate::checkers::call_checker::check_calls;
 use crate::checkers::heap_checker::check_heap;
 use crate::checkers::stack_checker::check_stack;
@@ -32,7 +35,7 @@ pub struct Config {
 
 fn run(config: Config) {
     let mut func_counter = 0;
-    let mut info: Vec<(std::string::String, usize, f64, f64, f64, f64)> = vec![];
+    let info: Vec<(std::string::String, usize, f64, f64, f64, f64)> = vec![];
     let program = load_program(&config.module_path);
     println!("Loading Metadata");
     let metadata = load_metadata(&config.module_path);
@@ -47,9 +50,19 @@ fn run(config: Config) {
         //let irmap = lift_cfg(&program, &cfg, &metadata);
         check_cfg_integrity(&cfg.blocks, &cfg.graph);
 
+        let locals_start = Instant::now();
+        // let locals_analyzer = LocalsAnalyzer {};
+        // let locals_result = run_worklist(&cfg, &irmap, &locals_analyzer);
+        // println!("{:?}", locals_result);
+        // let stack_safe = check_locals(stack_result, &irmap, &locals_analyzer);
+        // if !stack_safe {
+            panic!("Not Confidential");
+        // }
+
         let stack_start = Instant::now();
         let stack_analyzer = StackAnalyzer {};
-        let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer);
+        let stack_result : AnalysisResult<StackGrowthLattice> = run_worklist(&cfg, &irmap, &stack_analyzer);
+        println!("{:?}", stack_result);
         let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
         if !stack_safe {
             panic!("Not Stack Safe");
@@ -86,7 +99,7 @@ fn run(config: Config) {
         info.push((
             func_name.to_string(),
             cfg.blocks.len(),
-            (stack_start - start).as_secs_f64(),
+            (stack_start - locals_start).as_secs_f64(),
             (heap_start - stack_start).as_secs_f64(),
             (call_start - heap_start).as_secs_f64(),
             (end - call_start).as_secs_f64(),
@@ -95,7 +108,7 @@ fn run(config: Config) {
             "Verified {:?} at {:?} blocks. CFG: {:?}s Stack: {:?}s Heap: {:?}s Calls: {:?}s",
             func_name,
             cfg.blocks.len(),
-            (stack_start - start).as_secs_f64(),
+            (stack_start - locals_start).as_secs_f64(),
             (heap_start - stack_start).as_secs_f64(),
             (call_start - heap_start).as_secs_f64(),
             (end - call_start).as_secs_f64()

@@ -2,8 +2,8 @@ use crate::analyses::stack_analyzer::StackAnalyzer;
 use crate::analyses::{AbstractAnalyzer, AnalysisResult};
 use crate::checkers::Checker;
 use crate::utils::ir_utils::{get_imm_mem_offset, is_stack_access};
-use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::stackgrowthlattice::StackGrowthLattice;
+use crate::lattices::reaching_defs_lattice::LocIdx;
+use crate::lattices::stack_growth_lattice::StackGrowthLattice;
 use crate::utils::lifter::{IRMap, MemArgs, Stmt, Value};
 
 pub struct StackChecker<'a> {
@@ -17,8 +17,8 @@ pub fn check_stack(
     analyzer: &StackAnalyzer,
 ) -> bool {
     StackChecker {
-        irmap: irmap,
-        analyzer: analyzer,
+        irmap,
+        analyzer,
     }
     .check(result)
 }

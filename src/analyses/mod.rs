@@ -3,7 +3,7 @@ pub mod heap_analyzer;
 pub mod jump_analyzer;
 pub mod reaching_defs;
 pub mod stack_analyzer;
-use crate::lattices::reachingdefslattice::LocIdx;
+use crate::lattices::reaching_defs_lattice::LocIdx;
 use crate::lattices::{Lattice, VarState};
 use crate::utils::lifter::{Binopcode, IRBlock, IRMap, Stmt, Value};
 use std::collections::{HashMap, VecDeque};
@@ -125,7 +125,7 @@ pub fn run_worklist<T: AbstractAnalyzer<State>, State: VarState + Lattice + Clon
         for (succ_addr, branch_state) in
             analyzer.process_branch(irmap, &new_state, &succ_addrs, &addr)
         {
-            let has_change = 
+            let has_change =
                 if statemap.contains_key(&succ_addr) {
                     let old_state = statemap.get(&succ_addr).unwrap();
                     let merged_state = old_state.meet(&branch_state, &LocIdx { addr: addr, idx: 0 });
@@ -137,7 +137,6 @@ pub fn run_worklist<T: AbstractAnalyzer<State>, State: VarState + Lattice + Clon
                     let has_change = *old_state != merged_state;
                     statemap.insert(succ_addr, merged_state);
                     has_change
-                    
                 } else {
                     statemap.insert(succ_addr, branch_state);
                     true

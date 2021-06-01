@@ -1,9 +1,10 @@
-use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::Lattice;
+use std::fmt::Debug;
+use crate::lattices::reaching_defs_lattice::LocIdx;
+use crate::lattices::{Semilattice, Lattice};
 use crate::utils::lifter::ValSize;
 
 #[derive(Default, PartialEq, Eq, Clone, PartialOrd, Debug)]
-pub struct X86RegsLattice<T: Lattice + Clone> {
+pub struct X86RegsLattice<T> {
     pub rax: T,
     pub rbx: T,
     pub rcx: T,
@@ -23,7 +24,7 @@ pub struct X86RegsLattice<T: Lattice + Clone> {
     pub zf: T,
 }
 
-impl<T: Lattice + Clone> X86RegsLattice<T> {
+impl<T: Default + Clone + Eq + Debug> X86RegsLattice<T> {
     pub fn get(&self, index: &u8, size: &ValSize) -> T {
         if let ValSize::SizeOther = size {
             return Default::default();
@@ -149,7 +150,7 @@ impl<T: Lattice + Clone> X86RegsLattice<T> {
     }
 }
 
-impl<T: Lattice + Clone> Lattice for X86RegsLattice<T> {
+impl<T: Semilattice + Clone> Semilattice for X86RegsLattice<T> {
     fn meet(&self, other: &Self, loc_idx: &LocIdx) -> Self {
         X86RegsLattice {
             rax: self.rax.meet(&other.rax, loc_idx),
@@ -172,6 +173,8 @@ impl<T: Lattice + Clone> Lattice for X86RegsLattice<T> {
         }
     }
 }
+
+impl<T: Lattice + Clone> Lattice for X86RegsLattice<T> {}
 
 #[test]
 fn regs_lattice_test() {

@@ -1,4 +1,4 @@
-use crate::lattices::{Lattice, VariableState};
+use crate::lattices::{Semilattice, Lattice, VariableState};
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 
@@ -41,7 +41,7 @@ impl PartialEq for ReachingDefnLattice {
     }
 }
 
-impl Lattice for ReachingDefnLattice {
+impl Semilattice for ReachingDefnLattice {
     fn meet(&self, other: &Self, _loc_idx: &LocIdx) -> Self {
         let newdefs: BTreeSet<LocIdx> = self.defs.union(&other.defs).cloned().collect();
         ReachingDefnLattice { defs: newdefs }
@@ -56,6 +56,8 @@ impl Default for ReachingDefnLattice {
     }
 }
 
+impl Lattice for ReachingDefnLattice {}
+
 pub fn singleton(loc_idx: LocIdx) -> ReachingDefnLattice {
     let mut bset = BTreeSet::new();
     bset.insert(loc_idx);
@@ -64,7 +66,7 @@ pub fn singleton(loc_idx: LocIdx) -> ReachingDefnLattice {
 
 pub fn loc(addr: u64, idx: u32) -> ReachingDefnLattice{
     singleton(LocIdx {
-        addr: addr,
-        idx: idx,
+        addr,
+        idx,
     })
 }

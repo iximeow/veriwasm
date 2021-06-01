@@ -1,14 +1,15 @@
+use crate::analyses::AnalysisResult;
 use crate::analyses::call_analyzer::CallAnalyzer;
 use crate::analyses::heap_analyzer::HeapAnalyzer;
 use crate::analyses::reaching_defs::{analyze_reaching_defs,ReachingDefnAnalyzer};
 use crate::analyses::run_worklist;
 use crate::analyses::stack_analyzer::StackAnalyzer;
+use crate::lattices::stack_growth_lattice::StackGrowthLattice;
 use crate::checkers::call_checker::check_calls;
 use crate::checkers::heap_checker::check_heap;
 use crate::checkers::stack_checker::check_stack;
 use crate::utils::ir_utils::has_indirect_calls;
 use crate::utils::utils::{fully_resolved_cfg,get_data,get_one_resolved_cfg};
-use std::panic;
 use crate::utils::utils::{load_metadata, load_program};
 use yaxpeax_core::analyses::control_flow::check_cfg_integrity;
 
@@ -22,7 +23,7 @@ fn full_test_helper(path: &str) {
         let (cfg, irmap) = fully_resolved_cfg(&program, &x86_64_data.contexts, &metadata, addr);
         check_cfg_integrity(&cfg.blocks, &cfg.graph);
         let stack_analyzer = StackAnalyzer {};
-        let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer);
+        let stack_result : AnalysisResult<StackGrowthLattice> = run_worklist(&cfg, &irmap, &stack_analyzer);
         let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
         assert!(stack_safe);
         println!("Checking Heap Safety");
@@ -59,7 +60,7 @@ fn negative_test_helper(path: &str, func_name: &str) {
     check_cfg_integrity(&cfg.blocks, &cfg.graph);
     println!("Checking Stack Safety");
     let stack_analyzer = StackAnalyzer {};
-    let stack_result = run_worklist(&cfg, &irmap, &stack_analyzer);
+    let stack_result : AnalysisResult<StackGrowthLattice> = run_worklist(&cfg, &irmap, &stack_analyzer);
     let stack_safe = check_stack(stack_result, &irmap, &stack_analyzer);
     assert!(stack_safe);
     println!("Checking Heap Safety");

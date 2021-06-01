@@ -1,9 +1,9 @@
 use crate::analyses::call_analyzer::CallAnalyzer;
 use crate::analyses::{AbstractAnalyzer, AnalysisResult};
 use crate::checkers::Checker;
-use crate::lattices::calllattice::{CallCheckLattice, CallCheckValue};
-use crate::lattices::davlattice::DAV;
-use crate::lattices::reachingdefslattice::LocIdx;
+use crate::lattices::call_lattice::{CallCheckLattice, CallCheckValue};
+use crate::lattices::dav_lattice::DAV;
+use crate::lattices::reaching_defs_lattice::LocIdx;
 use crate::utils::lifter::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
 
 pub struct CallChecker<'a> {

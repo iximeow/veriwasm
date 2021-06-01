@@ -1,6 +1,6 @@
 use crate::analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
-use crate::lattices::reachingdefslattice::{singleton, LocIdx, ReachLattice, loc};
 use crate::lattices::VarState;
+use crate::lattices::reaching_defs_lattice::{singleton, LocIdx, ReachLattice, loc};
 use crate::utils::lifter::{Binopcode, IRMap, Stmt, Unopcode};
 use crate::utils::utils::LucetMetadata;
 use yaxpeax_core::analyses::control_flow::VW_CFG;
@@ -45,7 +45,7 @@ impl ReachingDefnAnalyzer{
                 );
             }
         }
-        unimplemented!()        
+        unimplemented!()
     }
 }
 
@@ -70,7 +70,7 @@ impl AbstractAnalyzer<ReachLattice> for ReachingDefnAnalyzer {
         s.regs.r15 = loc(0xdeadbeef, 14);
 
         s.stack.update(
-            0x8, 
+            0x8,
             loc(0xdeadbeef, 15),
             4,
         );

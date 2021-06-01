@@ -1,6 +1,5 @@
-use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::reachingdefslattice::ReachingDefnLattice;
-use crate::lattices::Lattice;
+use crate::lattices::reaching_defs_lattice::{LocIdx, ReachingDefnLattice};
+use crate::lattices::{Semilattice, Lattice};
 use std::cmp::Ordering;
 
 // Dependent Abstract Value
@@ -32,7 +31,7 @@ impl PartialOrd for DAV {
     }
 }
 
-impl Lattice for DAV {
+impl Semilattice for DAV {
     fn meet(&self, other: &Self, _loc_idx: &LocIdx) -> Self {
         match (self, other) {
             (DAV::Unknown, _) => DAV::Unknown,
@@ -58,3 +57,5 @@ impl Default for DAV {
         DAV::Unknown
     }
 }
+
+impl Lattice for DAV {}

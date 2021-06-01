@@ -1,26 +1,29 @@
-pub mod calllattice;
-pub mod davlattice;
-pub mod heaplattice;
-pub mod reachingdefslattice;
-pub mod regslattice;
-pub mod stackgrowthlattice;
-pub mod stacklattice;
-pub mod switchlattice;
+pub mod call_lattice;
+pub mod dav_lattice;
+pub mod heap_lattice;
+pub mod reaching_defs_lattice;
+pub mod regs_lattice;
+pub mod stack_growth_lattice;
+pub mod stack_lattice;
+pub mod switch_lattice;
 use crate::utils::ir_utils::{get_imm_offset, is_rsp};
-use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::regslattice::X86RegsLattice;
-use crate::lattices::stacklattice::StackLattice;
+use crate::lattices::reaching_defs_lattice::LocIdx;
+use crate::lattices::regs_lattice::X86RegsLattice;
+use crate::lattices::stack_lattice::StackLattice;
 use crate::utils::lifter::{Binopcode, MemArg, MemArgs, ValSize, Value};
 use std::cmp::Ordering;
 use std::fmt::Debug;
 
-pub trait Lattice: PartialOrd + Eq + Default + Debug {
-    fn meet(&self, other: &Self, loc: &LocIdx) -> Self;
+pub trait Semilattice : PartialOrd + Eq {
+   fn meet(&self, other: &Self, loc: &LocIdx) -> Self;
+}
+
+pub trait Lattice: Semilattice + Default + Debug {
 }
 
 pub trait VarState {
     type Var;
-    fn get(&mut self, index: &Value) -> Option<Self::Var>;
+    fn get(&self, index: &Value) -> Option<Self::Var>;
     fn set(&mut self, index: &Value, v: Self::Var) -> ();
     fn set_to_bot(&mut self, index: &Value) -> ();
     fn on_call(&mut self) -> ();
@@ -44,7 +47,7 @@ impl PartialEq for BooleanLattice {
     }
 }
 
-impl Lattice for BooleanLattice {
+impl Semilattice for BooleanLattice {
     fn meet(&self, other: &Self, _loc_idx: &LocIdx) -> Self {
         BooleanLattice {
             v: self.v && other.v,
@@ -57,6 +60,8 @@ impl Default for BooleanLattice {
         BooleanLattice { v: false }
     }
 }
+
+impl Lattice for BooleanLattice {}
 
 pub type Constu32Lattice = ConstLattice<u32>;
 
@@ -88,7 +93,7 @@ impl<T: Eq + Clone + Debug> PartialEq for ConstLattice<T> {
     }
 }
 
-impl<T: Eq + Clone + Debug> Lattice for ConstLattice<T> {
+impl<T: Eq + Clone + Debug> Semilattice for ConstLattice<T> {
     fn meet(&self, other: &Self, _loc_idx: &LocIdx) -> Self {
         if self.v == other.v {
             ConstLattice { v: self.v.clone() }
@@ -104,6 +109,8 @@ impl<T: Eq + Clone + Debug> Default for ConstLattice<T> {
     }
 }
 
+impl<T: Eq + Clone + Debug> Lattice for ConstLattice<T> {}
+
 impl<T: Eq + Clone + Debug> ConstLattice<T> {
     pub fn new(v: T) -> Self {
         ConstLattice { v: Some(v) }
@@ -111,12 +118,12 @@ impl<T: Eq + Clone + Debug> ConstLattice<T> {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Default, Clone, Debug)]
-pub struct VariableState<T: Lattice + Clone> {
+pub struct VariableState<T> {
     pub regs: X86RegsLattice<T>,
     pub stack: StackLattice<T>,
 }
 
-impl<T: Lattice + Clone> Lattice for VariableState<T> {
+impl<T: Semilattice + Clone> Semilattice for VariableState<T> {
     fn meet(&self, other: &Self, loc_idx: &LocIdx) -> Self {
         VariableState {
             regs: self.regs.meet(&other.regs, loc_idx),
@@ -124,6 +131,8 @@ impl<T: Lattice + Clone> Lattice for VariableState<T> {
         }
     }
 }
+
+impl<T: Lattice + Clone> Lattice for VariableState<T> {}
 
 impl<T: Lattice + Clone> VarState for VariableState<T> {
     type Var = T;
@@ -158,12 +167,13 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
         }
     }
 
-    fn get(&mut self, index: &Value) -> Option<T> {
+    // TODO(Matt): is this assuming that rsp is never touched?
+    fn get(&self, index: &Value) -> Option<T> {
         match index {
             Value::Mem(memsize, memargs) => match memargs {
                 MemArgs::Mem1Arg(arg) => {
                     if let MemArg::Reg(regnum, _) = arg {
-                        if *regnum == 4 {
+                        if *regnum == 4 { // rsp
                             return Some(self.stack.get(0, memsize.to_u32() / 8));
                         }
                     }
@@ -171,7 +181,7 @@ impl<T: Lattice + Clone> VarState for VariableState<T> {
                 }
                 MemArgs::Mem2Args(arg1, arg2) => {
                     if let MemArg::Reg(regnum, _) = arg1 {
-                        if *regnum == 4 {
+                        if *regnum == 4 { // rsp
                             if let MemArg::Imm(_, _, offset) = arg2 {
                                 return Some(self.stack.get(*offset, memsize.to_u32() / 8));
                             }

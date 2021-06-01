@@ -1,6 +1,6 @@
-use crate::lattices::davlattice::DAV;
-use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::{Lattice, VariableState};
+use crate::lattices::dav_lattice::DAV;
+use crate::lattices::reaching_defs_lattice::LocIdx;
+use crate::lattices::{Semilattice, Lattice, VariableState};
 use std::cmp::Ordering;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Debug)]
@@ -35,7 +35,7 @@ impl CallCheckValueLattice {
     }
 }
 
-impl Lattice for CallCheckValueLattice {
+impl Semilattice for CallCheckValueLattice {
     fn meet(&self, other: &Self, loc_idx: &LocIdx) -> Self {
         if self.v.clone() == other.v {
             CallCheckValueLattice { v: self.v.clone() }
@@ -51,6 +51,8 @@ impl Lattice for CallCheckValueLattice {
         }
     }
 }
+
+impl Lattice for CallCheckValueLattice {}
 
 impl PartialOrd for CallCheckValueLattice {
     fn partial_cmp(&self, other: &CallCheckValueLattice) -> Option<Ordering> {

@@ -1,16 +1,16 @@
-use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::Lattice;
+use crate::lattices::reaching_defs_lattice::LocIdx;
+use crate::lattices::Semilattice;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::default::Default;
 
 #[derive(PartialEq, Eq, Clone, Debug)]
-pub struct StackSlot<T: Lattice + Clone> {
+pub struct StackSlot<T> {
     pub size: u32,
     pub value: T,
 }
 
-impl<T: Lattice + Clone> PartialOrd for StackSlot<T> {
+impl<T: PartialOrd> PartialOrd for StackSlot<T> {
     fn partial_cmp(&self, other: &StackSlot<T>) -> Option<Ordering> {
         if self.size != other.size {
             None
@@ -20,14 +20,14 @@ impl<T: Lattice + Clone> PartialOrd for StackSlot<T> {
     }
 }
 
-//Currently implemented with hashmap, could also use a vector for a dense map
+// Currently implemented with hashmap, could also use a vector for a dense map
 #[derive(Eq, Clone, Debug)]
-pub struct StackLattice<T: Lattice + Clone> {
+pub struct StackLattice<T> {
     pub offset: i64,
     pub map: HashMap<i64, StackSlot<T>>,
 }
 
-impl<T: Lattice + Clone> StackLattice<T> {
+impl<T: Default + Eq + Clone> StackLattice<T> {
     pub fn update(&mut self, offset: i64, value: T, size: u32) -> () {
         //Check if 4 aligned
         if (offset & 3) != 0 {
@@ -56,8 +56,8 @@ impl<T: Lattice + Clone> StackLattice<T> {
             self.map.insert(
                 self.offset + offset,
                 StackSlot {
-                    size: size,
-                    value: value,
+                    size,
+                    value,
                 },
             );
         }
@@ -89,7 +89,7 @@ impl<T: Lattice + Clone> StackLattice<T> {
 }
 
 //check if StackLattice s1 is less than StackLattice s2
-fn hashmap_le<T: Lattice + Clone>(s1: &StackLattice<T>, s2: &StackLattice<T>) -> bool {
+fn hashmap_le<T: PartialOrd>(s1: &StackLattice<T>, s2: &StackLattice<T>) -> bool {
     for (k1, v1) in s1.map.iter() {
         if !s2.map.contains_key(k1) {
             return false;
@@ -103,7 +103,7 @@ fn hashmap_le<T: Lattice + Clone>(s1: &StackLattice<T>, s2: &StackLattice<T>) ->
     true
 }
 
-impl<T: Lattice + Clone> PartialOrd for StackLattice<T> {
+impl<T: PartialOrd> PartialOrd for StackLattice<T> {
     fn partial_cmp(&self, other: &StackLattice<T>) -> Option<Ordering> {
         if self.offset != other.offset {
             None
@@ -121,14 +121,14 @@ impl<T: Lattice + Clone> PartialOrd for StackLattice<T> {
     }
 }
 
-impl<T: Lattice + Clone> PartialEq for StackLattice<T> {
+impl<T: PartialEq> PartialEq for StackLattice<T> {
     fn eq(&self, other: &StackLattice<T>) -> bool {
         (self.map == other.map) && (self.offset == other.offset)
     }
 }
 
-//assumes that stack offset is equal in both stack lattices
-impl<T: Lattice + Clone> Lattice for StackLattice<T> {
+// assumes that stack offset is equal in both stack lattices
+impl<T: Semilattice + Clone> Semilattice for StackLattice<T> {
     fn meet(&self, other: &Self, loc_idx: &LocIdx) -> Self {
         let mut newmap: HashMap<i64, StackSlot<T>> = HashMap::new();
         for (k, v1) in self.map.iter() {
@@ -136,13 +136,11 @@ impl<T: Lattice + Clone> Lattice for StackLattice<T> {
                 Some(v2) => {
                     if v1.size == v2.size {
                         let new_v = v1.value.meet(&v2.value.clone(), loc_idx);
-                        if new_v != Default::default() {
-                            let newslot = StackSlot {
-                                size: v1.size,
-                                value: new_v,
-                            };
-                            newmap.insert(*k, newslot);
-                        }
+                        let newslot = StackSlot {
+                            size: v1.size,
+                            value: new_v,
+                        };
+                        newmap.insert(*k, newslot);
                     }
                 }
                 None => (),
@@ -156,7 +154,7 @@ impl<T: Lattice + Clone> Lattice for StackLattice<T> {
     }
 }
 
-impl<T: Lattice + Clone> Default for StackLattice<T> {
+impl<T> Default for StackLattice<T> {
     fn default() -> Self {
         StackLattice {
             offset: 0,

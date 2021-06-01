@@ -1,7 +1,7 @@
 use crate::analyses::jump_analyzer::SwitchAnalyzer;
 use crate::analyses::{AbstractAnalyzer, AnalysisResult};
-use crate::lattices::reachingdefslattice::LocIdx;
-use crate::lattices::switchlattice::{SwitchLattice, SwitchValue, SwitchValueLattice};
+use crate::lattices::reaching_defs_lattice::LocIdx;
+use crate::lattices::switch_lattice::{SwitchLattice, SwitchValue, SwitchValueLattice};
 use crate::utils::lifter::{IRMap, Stmt, Value};
 use std::collections::HashMap;
 use yaxpeax_core::memory::repr::process::ModuleData;

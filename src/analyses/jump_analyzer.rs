@@ -1,8 +1,8 @@
 use crate::analyses::reaching_defs::ReachingDefnAnalyzer;
 use crate::analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
-use crate::lattices::reachingdefslattice::{LocIdx, ReachLattice};
-use crate::lattices::stacklattice::StackSlot;
-use crate::lattices::switchlattice::{SwitchLattice, SwitchValue, SwitchValueLattice};
+use crate::lattices::reaching_defs_lattice::{LocIdx, ReachLattice};
+use crate::lattices::stack_lattice::StackSlot;
+use crate::lattices::switch_lattice::{SwitchLattice, SwitchValue, SwitchValueLattice};
 use crate::lattices::VarState;
 use crate::utils::lifter::{Binopcode, IRMap, MemArg, MemArgs, ValSize, Value};
 use crate::utils::utils::{get_rsp_offset, LucetMetadata};
@@ -56,7 +56,7 @@ impl AbstractAnalyzer<SwitchLattice> for SwitchAnalyzer {
                 _ => (),
             }
         }
-        
+
         match opcode {
             Binopcode::Cmp => (),
             Binopcode::Test =>  {in_state.regs.zf = Default::default();},

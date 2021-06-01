@@ -2,8 +2,8 @@ use crate::analyses::heap_analyzer::HeapAnalyzer;
 use crate::analyses::{AbstractAnalyzer, AnalysisResult};
 use crate::checkers::Checker;
 use crate::utils::ir_utils::{is_mem_access, is_stack_access};
-use crate::lattices::heaplattice::{HeapLattice, HeapValue};
-use crate::lattices::reachingdefslattice::LocIdx;
+use crate::lattices::heap_lattice::{HeapLattice, HeapValue};
+use crate::lattices::reaching_defs_lattice::LocIdx;
 use crate::utils::lifter::{IRMap, MemArg, MemArgs, Stmt, ValSize, Value};
 
 pub struct HeapChecker<'a> {
