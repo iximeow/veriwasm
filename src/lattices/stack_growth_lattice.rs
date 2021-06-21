@@ -1,4 +1,5 @@
-use crate::lattices::{ConstLattice, VarState};
+use crate::lattices::ConstLattice;
+use crate::lattices::state_lattice::VarState;
 use crate::utils::lifter::{Binopcode, Value};
 
 pub type StackGrowthLattice = ConstLattice<(i64, i64)>;
@@ -46,8 +47,8 @@ impl StackGrowthLattice {
 
 #[test]
 fn stack_growth_lattice_test() {
-    use crate::lattices::reachingdefslattice::LocIdx;
-    use crate::lattices::Lattice;
+    use crate::lattices::reaching_defs_lattice::LocIdx;
+    use crate::lattices::Semilattice;
 
     let x1 = StackGrowthLattice { v: None };
     let x2 = StackGrowthLattice { v: Some((1, 4096)) };

@@ -1,4 +1,5 @@
-use crate::analyses::heap_analyzer::HeapAnalyzer;
+use crate::{analyses::heap_analyzer::HeapAnalyzer};
+use crate::lattices::state_lattice::{VarIndex, X86Regs};
 use crate::analyses::{AbstractAnalyzer, AnalysisResult};
 use crate::checkers::Checker;
 use crate::utils::ir_utils::{is_mem_access, is_stack_access};
@@ -39,7 +40,7 @@ impl Checker<HeapLattice> for HeapChecker<'_> {
         match ir_stmt {
             //1. Check that at each call rdi = HeapBase
             Stmt::Call(_) => {
-                match state.regs.rdi.v {
+                match state.get_var_slot(&VarIndex::Reg(X86Regs::Rdi)) {
                     Some(HeapValue::HeapBase) => (),
                     _ => {
                         println!("Call failure {:?}", state.stack.get(0, 8));

@@ -1,4 +1,5 @@
-use crate::lattices::{Semilattice, Lattice, VariableState};
+use crate::lattices::{Semilattice, Lattice};
+use crate::lattices::state_lattice::VariableState;
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 

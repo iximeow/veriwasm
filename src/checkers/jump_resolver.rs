@@ -60,7 +60,7 @@ pub fn resolve_jumps(
             for (idx, ir_stmt) in ir_stmts.iter().enumerate() {
                 match ir_stmt {
                     Stmt::Branch(_, Value::Reg(regnum, regsize)) => {
-                        let aval = state.regs.get(regnum, regsize);
+                        let aval = state.get_reg_slot(regnum, regsize);
                         let targets = extract_jmp_targets(program, &aval);
                         switch_targets.insert(*addr, targets);
                     }

@@ -2,15 +2,11 @@ pub mod call_lattice;
 pub mod dav_lattice;
 pub mod heap_lattice;
 pub mod reaching_defs_lattice;
-pub mod regs_lattice;
 pub mod stack_growth_lattice;
-pub mod stack_lattice;
 pub mod switch_lattice;
-use crate::utils::ir_utils::{get_imm_offset, is_rsp};
+// pub mod locals_lattice;
+pub mod state_lattice;
 use crate::lattices::reaching_defs_lattice::LocIdx;
-use crate::lattices::regs_lattice::X86RegsLattice;
-use crate::lattices::stack_lattice::StackLattice;
-use crate::utils::lifter::{Binopcode, MemArg, MemArgs, ValSize, Value};
 use std::cmp::Ordering;
 use std::fmt::Debug;
 
@@ -19,15 +15,6 @@ pub trait Semilattice : PartialOrd + Eq {
 }
 
 pub trait Lattice: Semilattice + Default + Debug {
-}
-
-pub trait VarState {
-    type Var;
-    fn get(&self, index: &Value) -> Option<Self::Var>;
-    fn set(&mut self, index: &Value, v: Self::Var) -> ();
-    fn set_to_bot(&mut self, index: &Value) -> ();
-    fn on_call(&mut self) -> ();
-    fn adjust_stack_offset(&mut self, opcode: &Binopcode, dst: &Value, src1: &Value, src2: &Value);
 }
 
 #[derive(Eq, Clone, Copy, Debug)]
@@ -66,11 +53,11 @@ impl Lattice for BooleanLattice {}
 pub type Constu32Lattice = ConstLattice<u32>;
 
 #[derive(Eq, Clone, Debug)]
-pub struct ConstLattice<T: Eq + Clone + Debug> {
+pub struct ConstLattice<T> {
     pub v: Option<T>,
 }
 
-impl<T: Eq + Clone + Debug> PartialOrd for ConstLattice<T> {
+impl<T: Eq + Clone> PartialOrd for ConstLattice<T> {
     fn partial_cmp(&self, other: &ConstLattice<T>) -> Option<Ordering> {
         match (self.v.as_ref(), other.v.as_ref()) {
             (None, None) => Some(Ordering::Equal),
@@ -87,13 +74,13 @@ impl<T: Eq + Clone + Debug> PartialOrd for ConstLattice<T> {
     }
 }
 
-impl<T: Eq + Clone + Debug> PartialEq for ConstLattice<T> {
+impl<T: PartialEq> PartialEq for ConstLattice<T> {
     fn eq(&self, other: &ConstLattice<T>) -> bool {
         self.v == other.v
     }
 }
 
-impl<T: Eq + Clone + Debug> Semilattice for ConstLattice<T> {
+impl<T: Eq + Clone + PartialEq> Semilattice for ConstLattice<T> {
     fn meet(&self, other: &Self, _loc_idx: &LocIdx) -> Self {
         if self.v == other.v {
             ConstLattice { v: self.v.clone() }
@@ -103,121 +90,17 @@ impl<T: Eq + Clone + Debug> Semilattice for ConstLattice<T> {
     }
 }
 
-impl<T: Eq + Clone + Debug> Default for ConstLattice<T> {
+impl<T: Eq + Clone> Default for ConstLattice<T> {
     fn default() -> Self {
         ConstLattice { v: None }
     }
 }
 
-impl<T: Eq + Clone + Debug> Lattice for ConstLattice<T> {}
+impl<T: Eq + Clone + PartialEq + Debug> Lattice for ConstLattice<T> { }
 
-impl<T: Eq + Clone + Debug> ConstLattice<T> {
+impl<T: Eq + Clone> ConstLattice<T> {
     pub fn new(v: T) -> Self {
         ConstLattice { v: Some(v) }
-    }
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Default, Clone, Debug)]
-pub struct VariableState<T> {
-    pub regs: X86RegsLattice<T>,
-    pub stack: StackLattice<T>,
-}
-
-impl<T: Semilattice + Clone> Semilattice for VariableState<T> {
-    fn meet(&self, other: &Self, loc_idx: &LocIdx) -> Self {
-        VariableState {
-            regs: self.regs.meet(&other.regs, loc_idx),
-            stack: self.stack.meet(&other.stack, loc_idx),
-        }
-    }
-}
-
-impl<T: Lattice + Clone> Lattice for VariableState<T> {}
-
-impl<T: Lattice + Clone> VarState for VariableState<T> {
-    type Var = T;
-    fn set(&mut self, index: &Value, value: T) -> () {
-        match index {
-            Value::Mem(memsize, memargs) => match memargs {
-                MemArgs::Mem1Arg(arg) => {
-                    if let MemArg::Reg(regnum, _) = arg {
-                        if *regnum == 4 {
-                            self.stack.update(0, value, memsize.to_u32() / 8)
-                        }
-                    }
-                }
-                MemArgs::Mem2Args(arg1, arg2) => {
-                    if let MemArg::Reg(regnum, _) = arg1 {
-                        if *regnum == 4 {
-                            if let MemArg::Imm(_, _, offset) = arg2 {
-                                self.stack.update(*offset, value, memsize.to_u32() / 8)
-                            }
-                        }
-                    }
-                }
-                _ => (),
-            },
-            Value::Reg(regnum, s2) => {
-                if let ValSize::SizeOther = s2 {
-                } else {
-                    self.regs.set(regnum, s2, value)
-                }
-            }
-            Value::Imm(_, _, _) => panic!("Trying to write to an immediate value"),
-        }
-    }
-
-    // TODO(Matt): is this assuming that rsp is never touched?
-    fn get(&self, index: &Value) -> Option<T> {
-        match index {
-            Value::Mem(memsize, memargs) => match memargs {
-                MemArgs::Mem1Arg(arg) => {
-                    if let MemArg::Reg(regnum, _) = arg {
-                        if *regnum == 4 { // rsp
-                            return Some(self.stack.get(0, memsize.to_u32() / 8));
-                        }
-                    }
-                    None
-                }
-                MemArgs::Mem2Args(arg1, arg2) => {
-                    if let MemArg::Reg(regnum, _) = arg1 {
-                        if *regnum == 4 { // rsp
-                            if let MemArg::Imm(_, _, offset) = arg2 {
-                                return Some(self.stack.get(*offset, memsize.to_u32() / 8));
-                            }
-                        }
-                    }
-                    None
-                }
-                _ => None,
-            },
-            Value::Reg(regnum, s2) => Some(self.regs.get(regnum, s2)),
-            Value::Imm(_, _, _) => None,
-        }
-    }
-
-    fn set_to_bot(&mut self, index: &Value) {
-        self.set(index, Default::default())
-    }
-
-    fn on_call(&mut self) {
-        self.regs.clear_regs()
-    }
-
-    fn adjust_stack_offset(&mut self, opcode: &Binopcode, dst: &Value, src1: &Value, src2: &Value) {
-        if is_rsp(dst) {
-            if is_rsp(src1) {
-                let adjustment = get_imm_offset(src2);
-                //println!("opcode = {:?} {:?} = {:?} {:?} {:?}", opcode, dst, src1, src2, adjustment);
-                match opcode {
-                    Binopcode::Add => self.stack.update_stack_offset(adjustment),
-                    Binopcode::Sub => self.stack.update_stack_offset(-adjustment),
-                    _ => panic!("Illegal RSP write"),
-                }
-            } else {
-                panic!("Illegal RSP write")
-            }
-        }
     }
 }
 

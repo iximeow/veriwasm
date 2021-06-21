@@ -1,5 +1,6 @@
 use crate::lattices::reaching_defs_lattice::ReachingDefnLattice;
-use crate::lattices::{ConstLattice, VariableState};
+use crate::lattices::state_lattice::VariableState;
+use crate::lattices::ConstLattice;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum SwitchValue {
@@ -16,8 +17,8 @@ pub type SwitchLattice = VariableState<SwitchValueLattice>;
 
 #[test]
 fn switch_lattice_test() {
-    use crate::lattices::reachingdefslattice::LocIdx;
-    use crate::lattices::Lattice;
+    use crate::lattices::reaching_defs_lattice::LocIdx;
+    use crate::lattices::Semilattice;
 
     let x1 = SwitchValueLattice { v: None };
     let x2 = SwitchValueLattice {

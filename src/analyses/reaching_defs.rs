@@ -1,5 +1,5 @@
 use crate::analyses::{run_worklist, AbstractAnalyzer, AnalysisResult};
-use crate::lattices::VarState;
+use crate::lattices::state_lattice::VarState;
 use crate::lattices::reaching_defs_lattice::{singleton, LocIdx, ReachLattice, loc};
 use crate::utils::lifter::{Binopcode, IRMap, Stmt, Unopcode};
 use crate::utils::utils::LucetMetadata;
